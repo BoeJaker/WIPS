@@ -1,0 +1,8 @@
+#!/bin/bash
+# Rasberry Pi Initialization Script
+# Latest Version
+# Notifys of network status
+
+# Notify User Of Login
+echo "$report" | mail -s boejaker80@gmail.com
+python "python-notify" "$report" 

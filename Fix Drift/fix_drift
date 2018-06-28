@@ -1,0 +1,84 @@
+#!/bin/bash
+# FIX DRIFT
+# Status  : Complete 
+# cleans up action cameras with little input
+
+directory="$1"  ; subscriber="$2" ; gremlin="$3"
+
+SCRIPTPATH=$(dirname $(realpath $0))
+FILETYPE=".mp4"
+DEFAULT_DIRECTORY="/media/boejaker/DRIFT CARD/DCIM/100DRIFT"
+DEFAULT_GREMLINS="thm"
+DEFAULT_SUB="/$XDG_RUNTIME_DIR/gvfs/smb-share:server=wireless-plsgyh,share=public-01/Videos"
+depth=1
+
+
+
+function help_page {
+
+	echo -e "==-- HELP PAGE --==================\n"
+	echo -e "SYNTAX    : $ fix_drift [\"Directory\"] [Gremlin] \n           ( without $ and [ ] ) \n"
+	echo -e "            $ fix_drift [Command]\n           ( without $ and [ ] ) \n"
+	echo -e "ARGUMENTS : Directory\n             The directory that the action-cam stores videos in \n"
+	echo -e "            Gremlins \n             Identififer for junk files (default = thm) \n"
+	echo -e "COMMANDS  : help     \n             This help page\n"
+	echo -e "            upload   \n             Just Upload files\n"
+}
+
+
+function remove_gremlins {
+while IFS='' read -r path ; do
+	echo $path
+	echo "$path" | grep "$FILETYPE" && {
+		path=$(echo "$path" | grep -i "$gremlin")
+		rm -vi "$path" &>/dev/null ; }
+
+done <<< "$(find "$directory" -mindepth 0 -maxdepth $depth -print)"
+}
+
+
+function rename_to_dates {
+while IFS='' read -r path ; do
+    size=$(stat --printf="%s" "$path")
+	echo "$path" | grep "VI[0-9]*.mp4" && {
+		mod=$(stat "$path" | grep "Modify:" | sed 's/Modify: //' | sed 's/\..*//') # checks last modified for an action cam this is effectivly creation date
+		name=$(echo "$path" | sed "s/VI[0-9]*/$mod/" | tr '-' '.' | tr ':' '-' )
+		read -p "Would you like to tag" tag
+		echo "$name $size"
+		mv -i "$path" "$name" ; }
+
+done <<< "$(find "$directory" -mindepth 0 -maxdepth $depth -print)"
+}
+
+    
+function parse_args {
+	menu="0"
+	test -d "$directory" || { menu="$directory" ; directory="$DEFAULT_DIRECTORY" ; }
+    test -n "$subscriber" || { subscriber="$DEFAULT_SUB" ; }
+    test -n "$gremlins" || { gremins="$DEFAULT_GREMLINS" ;} 
+
+	case "$menu" in 
+
+		help )
+	    	help_page 
+	    	exit
+	    	shift 
+	        ;;
+
+	    upload )
+            echo $menu
+			bash "$SCRIPTPATH/update.sh" "share" "$directory" "$subscriber"
+			exit 
+			shift
+			;;
+	esac
+	shift
+
+     #test -d "$directory" || echo "Directory not found! $directory" ; exit ;
+    remove_gremlins
+    rename_to_dates 
+}
+
+
+parse_args
+
